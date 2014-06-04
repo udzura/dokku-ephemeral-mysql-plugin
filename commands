@@ -42,7 +42,7 @@ case "$1" in
         docker tag $IMAGE $MYSQL_IMAGE
 
         # Launch container
-        ID=$(docker run -e 'ROOT_PASSWORD=docker' -p 3306 -d $MYSQL_IMAGE)
+        ID=$(docker run -e 'ROOT_PASSWORD=docker' -p 3306 -d $MYSQL_IMAGE /usr/local/bin/start-mysql.sh)
         sleep 4
 
         # Link to a potential existing app
