@@ -10,4 +10,3 @@ git clone https://github.com/udzura/dokku-tmpmysql-dockerfile.git $BASE_DIR
 docker build -q=true -t $BASE_IMAGE_NAME $BASE_DIR
 rm -rf $BASE_DIR
 echo "Installed ephemeral_mysql plugin."
-cd -
