@@ -21,6 +21,8 @@ if [[ "$1" == ephemeral_mysql:* ]]; then
     fi
 fi
 
+DB=$(echo $APP | sed "s/-/_/g" )
+
 case "$1" in
     # Creates a mysql container
     ephemeral_mysql:create)
@@ -34,8 +36,8 @@ case "$1" in
         # Stop existing container with the same MySQL
         ID=$(docker ps | grep "$MYSQL_IMAGE":latest | awk '{print $1}')
         if [[ ! -z "$ID" ]]; then
-            echo "-----> Stopping existing $MYSQL_IMAGE"
-            docker stop $ID > /dev/null
+            echo "-----> Deleting existing $MYSQL_IMAGE"
+            dokku ephemeral_mysql:delete $APP
         fi
 
         # Fork MySQL image
@@ -45,7 +47,7 @@ case "$1" in
         docker tag $IMAGE $MYSQL_IMAGE
 
         # Launch container
-        ID=$(docker run -e ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD -p 3306 -d $MYSQL_IMAGE /usr/local/bin/start-mysql.sh)
+        ID=$(docker run -e ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD -e DB=$DB -p 3306 -d $MYSQL_IMAGE /usr/local/bin/start-mysql.sh)
         sleep 4
 
         # Link to a potential existing app
@@ -89,7 +91,7 @@ case "$1" in
         if [[ -n "$ID" ]]; then
             IP=$(docker inspect $ID | grep IPAddress | awk '{ print $2 }' | tr -d ',"')
             # Write MYSQL_IP to app's ENV file
-            MYSQL_URL="mysql://root:$MYSQL_ROOT_PASSWORD@$IP:3306/$APP"
+            MYSQL_URL="mysql://root:$MYSQL_ROOT_PASSWORD@$IP:3306/$DB"
             ENV_FILE="$DOKKU_ROOT/$APP/ENV"
             if [[ ! -f $ENV_FILE ]]; then
                 touch $ENV_FILE
