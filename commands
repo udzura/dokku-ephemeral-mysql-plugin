@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-BASE_IMAGE_NAME=ephemeral-mysql/base
+BASE_IMAGE_NAME=ephemeral_mysql/base
 
-if [[ "$1" == ephemeral-mysql:* ]]; then
+if [[ "$1" == ephemeral_mysql:* ]]; then
     if [[ -z "$2" ]]; then
         echo "You must specify an app name"
         exit 1
@@ -20,11 +20,11 @@ fi
 
 case "$1" in
     # Creates a mysql container
-    ephemeral-mysql:create)
+    ephemeral_mysql:create)
         MYSQL_IMAGE=emysql/$APP
         IMAGE=$(docker images | grep "$BASE_IMAGE_NAME " |  awk '{print $3}')
         if [[ -z "$IMAGE" ]]; then
-            echo "MySQL image not found... Did you run 'dokku plugins-install ephemeral-mysql' ?"
+            echo "MySQL image not found... Did you run 'dokku plugins-install ephemeral_mysql' ?"
             exit 1
         fi
 
@@ -46,15 +46,15 @@ case "$1" in
         sleep 4
 
         # Link to a potential existing app
-        dokku ephemeral-mysql:link $APP $APP
+        dokku ephemeral_mysql:link $APP $APP
         echo
         echo "-----> MySQL container created: $MYSQL_IMAGE"
         sleep 1
-        dokku ephemeral-mysql:info $APP
+        dokku ephemeral_mysql:info $APP
         ;;
 
     # Deletes a mysql container
-    ephemeral-mysql:delete)
+    ephemeral_mysql:delete)
         MYSQL_IMAGE=emysql/$APP
         # Stop the container
         ID=$(docker ps -a | grep "$MYSQL_IMAGE":latest | awk '{print $1}')
@@ -70,7 +70,7 @@ case "$1" in
         echo "-----> MySQL container deleted: $MYSQL_IMAGE"
         ;;
 
-    ephemeral-mysql:link)
+    ephemeral_mysql:link)
         if $APP_EXISTS; then
             if [[ -z "$3" ]]; then
                 echo "You must specify a container name"
@@ -97,7 +97,7 @@ case "$1" in
         fi
         ;;
 
-    ephemeral-mysql:info)
+    ephemeral_mysql:info)
         MYSQL_IMAGE=emysql/$APP
         ID=$(docker ps -a | grep "$MYSQL_IMAGE":latest | awk '{print $1}')
         IP=$(docker inspect $ID | grep IPAddress | awk '{ print $2 }' | tr -d ',"')
@@ -108,7 +108,7 @@ case "$1" in
         echo
         ;;
 
-    ephemeral-mysql:logs)
+    ephemeral_mysql:logs)
         MYSQL_IMAGE=emysql/$APP
         ID=$(docker ps -a | grep "$MYSQL_IMAGE" | awk '{print $1}')
         docker logs $ID | tail -n 100
@@ -116,11 +116,11 @@ case "$1" in
 
     help)
         cat && cat<<EOH
-    ephemeral-mysql:create <mysql_app> Create a ephemeral MySQL container
-    ephemeral-mysql:delete <mysql_app> Delete specified MySQL container
-    ephemeral-mysql:info <mysql_app> Display container informations
-    ephemeral-mysql:link <main_app> <mysql_app> Link an app to a MySQL container
-    ephemeral-mysql:logs <mysql_app> Display last logs from MySQL container
+    ephemeral_mysql:create <mysql_app> Create a ephemeral MySQL container
+    ephemeral_mysql:delete <mysql_app> Delete specified MySQL container
+    ephemeral_mysql:info <mysql_app> Display container informations
+    ephemeral_mysql:link <main_app> <mysql_app> Link an app to a MySQL container
+    ephemeral_mysql:logs <mysql_app> Display last logs from MySQL container
 EOH
         ;;
 esac

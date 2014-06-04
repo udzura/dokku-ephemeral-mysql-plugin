@@ -1,4 +1,4 @@
 #!/bin/bash
 
 APP="$1"; IMAGE="dokku/$APP";
-dokku ephemeral-mysql:link $APP $APP
+dokku ephemeral_mysql:link $APP $APP
