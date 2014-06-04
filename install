@@ -2,9 +2,11 @@
 
 set -e
 
+BASE_IMAGE_NAME=ephemeral-mysql/base
+
 cd /tmp
 git clone https://github.com/udzura/dokku-tmpmysql-dockerfile.git
-docker build -q=true -t ephemeral-mysql .
+docker build -q=true -t $BASE_IMAGE_NAME .
 rm -rf dokku-tmpmysql-dockerfile
 echo "Installed ephemeral-mysql plugin."
 cd -

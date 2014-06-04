@@ -1,0 +1,126 @@
+#!/bin/bash
+set -e
+
+BASE_IMAGE_NAME=ephemeral-mysql/base
+
+if [[ "$1" == ephemeral-mysql:* ]]; then
+    if [[ -z "$2" ]]; then
+        echo "You must specify an app name"
+        exit 1
+    else
+        APP="$2"
+        # Check if app exists with the same name
+        if [[ -d "$DOKKU_ROOT/$APP" ]]; then
+            APP_EXISTS=true
+        else
+            APP_EXISTS=false
+        fi
+    fi
+fi
+
+case "$1" in
+    # Creates a mysql container
+    ephemeral-mysql:create)
+        MYSQL_IMAGE=emysql/$APP
+        IMAGE=$(docker images | grep "$BASE_IMAGE_NAME " |  awk '{print $3}')
+        if [[ -z "$IMAGE" ]]; then
+            echo "MySQL image not found... Did you run 'dokku plugins-install ephemeral-mysql' ?"
+            exit 1
+        fi
+
+        # Stop existing container with the same MySQL
+        ID=$(docker ps | grep "$MYSQL_IMAGE":latest | awk '{print $1}')
+        if [[ ! -z "$ID" ]]; then
+            echo "-----> Stopping existing $MYSQL_IMAGE"
+            docker stop $ID > /dev/null
+        fi
+
+        # Fork MySQL image
+        ID=$(docker run -d $BASE_IMAGE_NAME exit 0)
+        docker wait $ID > /dev/null
+        IMAGE=$(docker commit $ID)
+        docker tag $IMAGE $MYSQL_IMAGE
+
+        # Launch container
+        ID=$(docker run -e 'ROOT_PASSWORD=docker' -p 3306 -d $MYSQL_IMAGE)
+        sleep 4
+
+        # Link to a potential existing app
+        dokku ephemeral-mysql:link $APP $APP
+        echo
+        echo "-----> MySQL container created: $MYSQL_IMAGE"
+        sleep 1
+        dokku ephemeral-mysql:info $APP
+        ;;
+
+    # Deletes a mysql container
+    ephemeral-mysql:delete)
+        MYSQL_IMAGE=emysql/$APP
+        # Stop the container
+        ID=$(docker ps -a | grep "$MYSQL_IMAGE":latest | awk '{print $1}')
+        if [[ ! -z $ID ]]; then
+            docker stop $ID
+        fi
+        # Remove image
+        IMAGE=$(docker images | grep "$MYSQL_IMAGE " | awk '{print $1}')
+        if [[ ! -z $IMAGE ]]; then
+            docker rmi $IMAGE
+        fi
+        echo
+        echo "-----> MySQL container deleted: $MYSQL_IMAGE"
+        ;;
+
+    ephemeral-mysql:link)
+        if $APP_EXISTS; then
+            if [[ -z "$3" ]]; then
+                echo "You must specify a container name"
+                exit 1
+            fi
+        fi
+
+        MYSQL_IMAGE="emysql/$3"
+        ID=$(docker ps -a | grep "$MYSQL_IMAGE":latest | awk '{print $1}')
+        if [[ -n "$ID" ]]; then
+            IP=$(docker inspect $ID | grep IPAddress | awk '{ print $2 }' | tr -d ',"')
+            # Write MYSQL_IP to app's ENV file
+            MYSQL_URL="mysql://$IP:3306"
+            ENV_FILE="$DOKKU_ROOT/$APP/ENV"
+            if [[ ! -f $ENV_FILE ]]; then
+                touch $ENV_FILE
+            fi
+            ENV_TEMP=$(cat "${ENV_FILE}" | sed "/^export MYSQL_URL=/ d" | sed "/^export DATABASE_URL=/ d")
+            ENV_TEMP="${ENV_TEMP}\nexport MYSQL_URL=${MYSQL_URL}"
+            ENV_TEMP="${ENV_TEMP}\nexport DATABASE_URL=${MYSQL_URL}"
+            echo -e "$ENV_TEMP" | sed '/^$/d' | sort > $ENV_FILE
+            echo
+            echo "-----> $APP linked to $MYSQL_IMAGE container"
+        fi
+        ;;
+
+    ephemeral-mysql:info)
+        MYSQL_IMAGE=emysql/$APP
+        ID=$(docker ps -a | grep "$MYSQL_IMAGE":latest | awk '{print $1}')
+        IP=$(docker inspect $ID | grep IPAddress | awk '{ print $2 }' | tr -d ',"')
+        PORT=$(docker port $ID 3306 | cut -d":" -f2)
+        echo
+        echo "\tHost: $IP"
+        echo "\tPublic port: $PORT"
+        echo
+        ;;
+
+    ephemeral-mysql:logs)
+        MYSQL_IMAGE=emysql/$APP
+        ID=$(docker ps -a | grep "$MYSQL_IMAGE" | awk '{print $1}')
+        docker logs $ID | tail -n 100
+        ;;
+
+    help)
+        cat && cat<<EOH
+    ephemeral-mysql:create <mysql_app> Create a ephemeral MySQL container
+    ephemeral-mysql:delete <mysql_app> Delete specified MySQL container
+    ephemeral-mysql:info <mysql_app> Display container informations
+    ephemeral-mysql:link <main_app> <mysql_app> Link an app to a MySQL container
+    ephemeral-mysql:logs <mysql_app> Display last logs from MySQL container
+EOH
+        ;;
+esac
