@@ -1,4 +1,5 @@
 #!/bin/bash
 
 APP="$1"; IMAGE="dokku/$APP";
-dokku ephemeral_mysql:link $APP $APP || echo "-----> Skipping link"
+dokku ephemeral_mysql:link $APP $APP || (echo "-----> Skipping link"; exit 1)
+echo "-----> Link successful."
