@@ -111,9 +111,12 @@ case "$1" in
         IP=$(docker inspect $ID | grep IPAddress | awk '{ print $2 }' | tr -d ',"')
         PORT=$(docker port $ID 3306 | cut -d":" -f2)
         echo
-        echo "    Host: $IP"
+        echo "    Host:          $IP"
         echo "    Internal port: 3306"
         echo "    Public port:   $PORT"
+        echo "    User name:     root"
+        echo "    Password:      $MYSQL_ROOT_PASSWORD"
+        echo "    DB name:       $DB"
         echo
         ;;
 
