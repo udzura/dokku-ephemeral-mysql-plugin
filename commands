@@ -2,6 +2,9 @@
 set -e
 
 BASE_IMAGE_NAME=ephemeral_mysql/base
+if [ -z "$MYSQL_ROOT_PASSWORD" ]; then
+  MYSQL_ROOT_PASSWORD=docker
+fi
 
 if [[ "$1" == ephemeral_mysql:* ]]; then
     if [[ -z "$2" ]]; then
@@ -42,7 +45,7 @@ case "$1" in
         docker tag $IMAGE $MYSQL_IMAGE
 
         # Launch container
-        ID=$(docker run -e 'ROOT_PASSWORD=docker' -p 3306 -d $MYSQL_IMAGE /usr/local/bin/start-mysql.sh)
+        ID=$(docker run -e ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD -p 3306 -d $MYSQL_IMAGE /usr/local/bin/start-mysql.sh)
         sleep 4
 
         # Link to a potential existing app
@@ -86,7 +89,7 @@ case "$1" in
         if [[ -n "$ID" ]]; then
             IP=$(docker inspect $ID | grep IPAddress | awk '{ print $2 }' | tr -d ',"')
             # Write MYSQL_IP to app's ENV file
-            MYSQL_URL="mysql://$IP:3306"
+            MYSQL_URL="mysql://root:$MYSQL_ROOT_PASSWORD@$IP:3306/$APP"
             ENV_FILE="$DOKKU_ROOT/$APP/ENV"
             if [[ ! -f $ENV_FILE ]]; then
                 touch $ENV_FILE
