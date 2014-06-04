@@ -36,7 +36,7 @@ case "$1" in
         fi
 
         # Fork MySQL image
-        ID=$(docker run -d $BASE_IMAGE_NAME exit 0)
+        ID=$(docker run -d $BASE_IMAGE_NAME /bin/bash -c 'exit 0')
         docker wait $ID > /dev/null
         IMAGE=$(docker commit $ID)
         docker tag $IMAGE $MYSQL_IMAGE
@@ -46,7 +46,7 @@ case "$1" in
         sleep 4
 
         # Link to a potential existing app
-        dokku ephemeral_mysql:link $APP $APP
+        dokku ephemeral_mysql:link $APP $APP || echo "-----> Skipping link..."
         echo
         echo "-----> MySQL container created: $MYSQL_IMAGE"
         sleep 1
@@ -76,10 +76,13 @@ case "$1" in
                 echo "You must specify a container name"
                 exit 1
             fi
+        else
+            echo "Main app $APP does not exist"
+            exit 2
         fi
 
         MYSQL_IMAGE="emysql/$3"
-        ID=$(docker ps -a | grep "$MYSQL_IMAGE":latest | awk '{print $1}')
+        ID=$(docker ps | grep "$MYSQL_IMAGE":latest | head -1 | awk '{print $1}')
         if [[ -n "$ID" ]]; then
             IP=$(docker inspect $ID | grep IPAddress | awk '{ print $2 }' | tr -d ',"')
             # Write MYSQL_IP to app's ENV file
@@ -99,12 +102,13 @@ case "$1" in
 
     ephemeral_mysql:info)
         MYSQL_IMAGE=emysql/$APP
-        ID=$(docker ps -a | grep "$MYSQL_IMAGE":latest | awk '{print $1}')
+        ID=$(docker ps | grep "$MYSQL_IMAGE":latest | head -1 | awk '{print $1}')
         IP=$(docker inspect $ID | grep IPAddress | awk '{ print $2 }' | tr -d ',"')
         PORT=$(docker port $ID 3306 | cut -d":" -f2)
         echo
-        echo "\tHost: $IP"
-        echo "\tPublic port: $PORT"
+        echo "    Host: $IP"
+        echo "    Internal port: 3306"
+        echo "    Public port:   $PORT"
         echo
         ;;
 
