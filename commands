@@ -91,7 +91,12 @@ case "$1" in
         if [[ -n "$ID" ]]; then
             IP=$(docker inspect $ID | grep IPAddress | awk '{ print $2 }' | tr -d ',"')
             # Write MYSQL_IP to app's ENV file
-            MYSQL_URL="mysql://root:$MYSQL_ROOT_PASSWORD@$IP:3306/$DB"
+            SCHEMA='mysql2'
+            if [[ -n "$FORCE_USE_MYSQL1" ]]; then
+                SCHEMA='mysql'
+            fi
+
+            MYSQL_URL="$SCHEMA://root:$MYSQL_ROOT_PASSWORD@$IP:3306/$DB"
             ENV_FILE="$DOKKU_ROOT/$APP/ENV"
             if [[ ! -f $ENV_FILE ]]; then
                 touch $ENV_FILE
